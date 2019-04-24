@@ -12,5 +12,6 @@ class Image:
             self.label = label
         self.img = cv2.imread(path)
 
-    def show(self):
-        cv2.imshow(self.img)
+    # def show(self):
+    #     cv2.imshow("image", self.img)
+    #     cv2.waitKey(0)
