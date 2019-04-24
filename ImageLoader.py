@@ -11,7 +11,6 @@ class ImageLoader:
         self.int2cls = {}
         self.count_cls = 0
 
-
     def load_supervised(self, dir="train"):
         ret = []
         root_path = self.data_path + "/supervised"
@@ -36,6 +35,14 @@ class ImageLoader:
                 img.load(cls_path+"/"+img_name, label)
                 ret.append(img)
         return ret
+
+    @staticmethod
+    def parse_supervised(data):
+        images, labels = [], []
+        for img in data:
+            images.append(img.img)
+            labels.append(img.label)
+        return images, labels
 
     def load_unsupervised(self):
         ret = []
@@ -64,5 +71,6 @@ class ImageLoader:
 if __name__ == '__main__':
     loader = ImageLoader()
     loader.train = loader.load_supervised("train")
+    images, labels = ImageLoader.parse_supervised(loader.train)
     # loader.val = loader.load_supervised("val")
     # loader.unsup = loader.load_unsupervised()
