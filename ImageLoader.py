@@ -1,6 +1,7 @@
 from os import listdir
 from Image import Image
 
+
 class ImageLoader:
     def __init__(self, data_root_path="./ssl_data_96"):
         self.data_path = data_root_path
