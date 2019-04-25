@@ -15,3 +15,11 @@ class Image:
     # def show(self):
     #     cv2.imshow("image", self.img)
     #     cv2.waitKey(0)
+
+
+if __name__ == '__main__':
+    img = Image(True)
+    img.load("./a.JPEG", 0)
+    img1 = cv2.cvtColor(img.img, cv2.COLOR_BGR2GRAY).flatten()
+    print(img1)
+    feature = []
