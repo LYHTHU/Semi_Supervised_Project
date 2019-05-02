@@ -30,8 +30,8 @@ class SemiSupervised:
 
         loader_unsup = torch.utils.data.DataLoader(concat_dataset, batch_size=self.batch_size, shuffle=True,
                                                    num_workers=self.num_workers)
-        return loader_unsup
         print("End loading mix")
+        return loader_unsup
 
     # Load and union the supervised training data
     # Input: transform
