@@ -29,7 +29,7 @@ class SemiSupervised:
         concat_dataset = torch.utils.data.ConcatDataset((data_sup, data_unsup))
 
         loader_unsup = torch.utils.data.DataLoader(concat_dataset, batch_size=self.batch_size, shuffle=True,
-                                             num_workers=self.num_workers)
+                                                   num_workers=self.num_workers)
         return loader_unsup
         print("End loading mix")
 
