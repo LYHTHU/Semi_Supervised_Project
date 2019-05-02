@@ -24,7 +24,7 @@ class SemiSupervised:
     def load_train_data_mix(self, transform=None):
         print("Start loading mix")
         data_sup = torchvision.datasets.ImageFolder(root=self.sup_train_root_path, transform=transform)
-        data_unsup = torchvision.datasets.ImageFolder(root=self.unsup_train_root_path, target_transform=transform)
+        data_unsup = torchvision.datasets.ImageFolder(root=self.unsup_train_root_path, transform=transform)
 
         concat_dataset = torch.utils.data.ConcatDataset((data_sup, data_unsup))
 
