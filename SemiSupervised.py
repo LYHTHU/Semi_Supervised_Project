@@ -21,11 +21,11 @@ class SemiSupervised:
     # Load and union the supervisd and unsupervised training data, ignoring labels
     def load_train_data_mix(self):
         data_sup = torchvision.datasets.ImageFolder(root=self.sup_train_root_path)
-        loader_sup = torch.utils.data.DataLoader(data_sup, batch_size=self.batch_size, shuffle=True,
-                                             num_workers=self.num_workers)
-
         data_unsup = torchvision.datasets.ImageFolder(root=self.unsup_train_root_path)
-        loader_unsup = torch.utils.data.DataLoader(data_sup, batch_size=self.batch_size, shuffle=True,
+
+        concat_dataset = torch.utils.data.ConcatDataset((data_sup, data_unsup))
+
+        loader_unsup = torch.utils.data.DataLoader(concat_dataset, batch_size=self.batch_size, shuffle=True,
                                              num_workers=self.num_workers)
 
     # Load and union the supervised training data
