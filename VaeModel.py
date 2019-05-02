@@ -28,7 +28,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-semi = SemiSupervised()
+semi = SemiSupervised(batch_size=args.batch_size)
 train_loader = semi.load_train_data_mix(transform=transforms.ToTensor())
 test_loader = semi.load_val_data(transform=transforms.ToTensor())
 
