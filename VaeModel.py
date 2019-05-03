@@ -6,7 +6,7 @@ from torch import nn, optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
-from SemiSupervised import SemiSupervised
+from Data import Data
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -28,9 +28,9 @@ device = torch.device("cuda" if args.cuda else "cpu")
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
-semi = SemiSupervised(batch_size=args.batch_size)
-train_loader = semi.load_train_data_mix(transform=transforms.ToTensor())
-test_loader = semi.load_val_data(transform=transforms.ToTensor())
+data = Data(batch_size=args.batch_size)
+train_loader = data.load_train_data_mix(transform=transforms.ToTensor())
+test_loader = data.load_val_data(transform=transforms.ToTensor())
 
 # train_loader = torch.utils.data.DataLoader(
 #     datasets.MNIST('../data', train=True, download=True,
@@ -46,11 +46,11 @@ class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
 
-        self.fc1 = nn.Linear(96*96, 400)
+        self.fc1 = nn.Linear(data.w*data.h*data.ch, 400)
         self.fc21 = nn.Linear(400, 20)
         self.fc22 = nn.Linear(400, 20)
         self.fc3 = nn.Linear(20, 400)
-        self.fc4 = nn.Linear(400, 96*96)
+        self.fc4 = nn.Linear(400, data.w*data.h*data.ch)
 
     def encode(self, x):
         h1 = F.relu(self.fc1(x))
@@ -66,7 +66,7 @@ class VAE(nn.Module):
         return torch.sigmoid(self.fc4(h3))
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, 96*96))
+        mu, logvar = self.encode(x.view(-1, data.w*data.h*data.ch))
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
@@ -77,7 +77,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
-    BCE = F.binary_cross_entropy(recon_x, x.view(-1, 96*96), reduction='sum')
+    BCE = F.binary_cross_entropy(recon_x, x.view(-1, data.w*data.h*data.ch), reduction='sum')
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
