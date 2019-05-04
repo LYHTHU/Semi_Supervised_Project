@@ -7,6 +7,8 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 from Data import Data
+import math
+import time
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -19,27 +21,21 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
 
 device = torch.device("cuda" if args.cuda else "cpu")
+if args.cuda:
+    print("Using GPU")
 
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
 
 data = Data(batch_size=args.batch_size)
 train_loader = data.load_train_data_mix(transform=transforms.ToTensor())
 test_loader = data.load_val_data(transform=transforms.ToTensor())
-
-# train_loader = torch.utils.data.DataLoader(
-#     datasets.MNIST('../data', train=True, download=True,
-#                    transform=transforms.ToTensor()),
-#     batch_size=args.batch_size, shuffle=True, **kwargs)
-
-# test_loader = torch.utils.data.DataLoader(
-#     datasets.MNIST('../data', train=False, transform=transforms.ToTensor()),
-#     batch_size=args.batch_size, shuffle=True, **kwargs)
 
 
 class VAE(nn.Module):
@@ -78,13 +74,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
     BCE = F.binary_cross_entropy(recon_x, x.view(-1, data.w*data.h*data.ch), reduction='sum')
-
-    # see Appendix B from VAE paper:
-    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-    # https://arxiv.org/abs/1312.6114
-    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-
     return BCE + KLD
 
 
@@ -107,31 +97,34 @@ def train(epoch):
 
     print('====> Epoch: {} Average loss: {:.4f}'.format(
           epoch, train_loss / len(train_loader.dataset)))
+    return train_loss
 
 
-def test(epoch):
-    model.eval()
+def model_test(epoch):
+    best_model.eval()
     test_loss = 0
     with torch.no_grad():
         for i, (data, _) in enumerate(test_loader):
             data = data.to(device)
-            recon_batch, mu, logvar = model(data)
+            recon_batch, mu, logvar = best_model(data)
             test_loss += loss_function(recon_batch, data, mu, logvar).item()
-            if i == 0:
-                n = min(data.size(0), 8)
-                comparison = torch.cat([data[:n], recon_batch.view(args.batch_size, 1, 96, 96)[:n]])
-                save_image(comparison.cpu(), 'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
     test_loss /= len(test_loader.dataset)
     print('====> Test set loss: {:.4f}'.format(test_loss))
 
 
 if __name__ == "__main__":
+    params_path = "vae_best.pth"
+    last_loss = math.inf
     for epoch in range(1, args.epochs + 1):
-        train(epoch)
-        test(epoch)
-        with torch.no_grad():
-            sample = torch.randn(64, 20).to(device)
-            sample = model.decode(sample).cpu()
-            save_image(sample.view(64, 1, 96, 96),
-                       'results/sample_' + str(epoch) + '.png')
+        start_time = time.time()
+        loss = train(epoch)
+        end_time = time.time()
+        print('====> Epoch: {}, running time: {:.2f} min'.format(epoch, (end_time-start_time)/60.0))
+        if loss < last_loss:
+            last_loss = loss
+            torch.save(model, params_path)
+        model_test(epoch)
+
+    best_model = torch.load(params_path)
+
