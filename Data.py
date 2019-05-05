@@ -10,7 +10,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class Data:
-    def __init__(self, batch_size=32, num_workers=2):
+    def __init__(self, batch_size=32, num_workers=4):
         self.sup_train_root_path = "../ssl_data_96/supervised/train"
         self.unsup_train_root_path = "../ssl_data_96/unsupervised"
         self.sup_val_root_path = "../ssl_data_96/supervised/val"

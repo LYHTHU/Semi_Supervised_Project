@@ -31,7 +31,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 if args.cuda:
     print("Using GPU")
 
-kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
+kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
 
 
 data = Data(batch_size=args.batch_size)
@@ -46,13 +46,13 @@ class Classifier(nn.Module):
         self.n_latent = self.vae.n_latent
         self.n_in = data.w * data.h * data.ch
         # self.n_latent = 200
-
+        self.n_class = 1000
         self.fc1 = nn.Linear(self.n_in, self.n_latent)
 
         self.cls = nn.Sequential(
             nn.Linear(self.n_latent, 4000),
             nn.ReLU(),
-            nn.Linear(4000, 1000),
+            nn.Linear(4000, self.n_class),
             nn.Sigmoid()
         )
 
@@ -65,7 +65,6 @@ class Classifier(nn.Module):
 
 def train(model, device, train_loader, optimizer, epoch, log_interval=100):
     model.train()
-    train_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
