@@ -10,7 +10,7 @@ from Data import Data
 import math
 import time
 
-parser = argparse.ArgumentParser(description='VAE MNIST Example')
+parser = argparse.ArgumentParser(description='VAE for Semi-Supervised Learning')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
@@ -35,17 +35,19 @@ kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
 
 data = Data(batch_size=args.batch_size)
 train_loader = data.load_train_data_mix(transform=transforms.ToTensor())
-test_loader = data.load_val_data(transform=transforms.ToTensor())
+# test_loader = data.load_val_data(transform=transforms.ToTensor())
 
 
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
+        self.n_latent = 20
+        self.params_path = "vae_best.pth"
 
         self.fc1 = nn.Linear(data.w*data.h*data.ch, 400)
-        self.fc21 = nn.Linear(400, 20)
-        self.fc22 = nn.Linear(400, 20)
-        self.fc3 = nn.Linear(20, 400)
+        self.fc21 = nn.Linear(400, self.n_latent)
+        self.fc22 = nn.Linear(400, self.n_latent)
+        self.fc3 = nn.Linear(self.n_latent, 400)
         self.fc4 = nn.Linear(400, data.w*data.h*data.ch)
 
     def encode(self, x):
@@ -100,7 +102,7 @@ def train(epoch):
     return train_loss
 
 
-def model_test(epoch):
+def model_test(epoch, test_loader):
     best_model.eval()
     test_loss = 0
     with torch.no_grad():
@@ -114,8 +116,8 @@ def model_test(epoch):
 
 
 if __name__ == "__main__":
-    params_path = "vae_best.pth"
     last_loss = math.inf
+    params_path = model.params_path
     for epoch in range(1, args.epochs + 1):
         start_time = time.time()
         loss = train(epoch)
@@ -124,7 +126,7 @@ if __name__ == "__main__":
         if loss < last_loss:
             last_loss = loss
             torch.save(model, params_path)
-        model_test(epoch)
+        # model_test(epoch)
 
     best_model = torch.load(params_path)
 
