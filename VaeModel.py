@@ -41,18 +41,39 @@ train_loader = data.load_train_data_mix(transform=transforms.ToTensor())
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
-        self.n_latent = 20
+        self.n_in = 96*96*3
+        self.n_latent = 1600
         self.params_path = "vae_best.pth"
 
-        self.fc1 = nn.Linear(data.w*data.h*data.ch, 400)
-        self.fc21 = nn.Linear(400, self.n_latent)
-        self.fc22 = nn.Linear(400, self.n_latent)
-        self.fc3 = nn.Linear(self.n_latent, 400)
-        self.fc4 = nn.Linear(400, data.w*data.h*data.ch)
+        # self.fc1 = nn.Linear(data.w*data.h*data.ch, 400)
+
+        # self.fc3 = nn.Linear(self.n_latent, 400)
+        # self.fc4 = nn.Linear(400, data.w*data.h*data.ch)
+
+        self.encoder = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=9),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=16, out_channels=16, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        self.fc21 = nn.Linear(20*20*16, self.n_latent)
+        self.fc22 = nn.Linear(20*20*16, self.n_latent)
+
+        self.decoder = nn.Sequential(
+            nn.Linear(in_features=self.n_latent, out_features=6400),
+            nn.ReLU(),
+            nn.Linear(in_features=6400, out_features=self.n_in),
+            nn.Sigmoid()
+        )
 
     def encode(self, x):
-        h1 = F.relu(self.fc1(x))
-        return self.fc21(h1), self.fc22(h1)
+        # h1 = F.relu(self.fc1(x))
+        x = self.encoder(x)
+        x = x.view(-1, 20*20*16)
+        return self.fc21(x), self.fc22(x)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)
@@ -60,13 +81,15 @@ class VAE(nn.Module):
         return mu + eps*std
 
     def decode(self, z):
-        h3 = F.relu(self.fc3(z))
+        # h3 = F.relu(self.fc3(z))
+        h3 = self.decoder(z)
         return torch.sigmoid(self.fc4(h3))
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, data.w*data.h*data.ch))
+        # mu, logvar = self.encode(x.view(-1, data.w*data.h*data.ch))
+        mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        return self.decode(z), mu, logvar
+        return self.decoder(z), mu, logvar
 
 
 model = VAE().to(device)
