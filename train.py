@@ -60,7 +60,7 @@ def loss_function(recon_x, x, mu, logvar):
 
     return BCE + KLD
 
-def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
+def train_model(model, criterion, optimizer, scheduler, save_path, num_epoch = 10):
     since = time.time()
     
     best_mode_wts = copy.deepcopy(model.state_dict())
@@ -73,6 +73,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 scheduler.step()
                 model.train()
             else:
+                continue
                 model.eval()
             
             run_loss = 0.0
@@ -105,29 +106,38 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                         loss.backward()
                         optimizer.step()
                         
-                if proc % 640 == 0:
+                if proc % 6400 == 0:
                     print('processed photos are {}'.format(proc))
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
                 #run_correct += torch.sum(labels.data == preds)
                 
                 
-            epoch_loss = run_loss/dataset_sizes[phase]
+            epoch_loss = run_loss/len(train_loader)
             #epoch_acc = run_correct/dataset_sizes[phase]
             
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+            torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'loss': epoch_loss
+            }, save_path)
             
             # deep copy the model
             if best_loss < 0:
                 best_loss = epoch_loss
-                best_model_wts = copy.deepycopy(mode.state_dict())
+                best_model_wts = copy.deepcopy(model.state_dict())
+                #torch.save(model.state_dict(), save_path)
                 
-            if phase == 'val' and epoch_loss < best_loss:
+            if epoch_loss < best_loss:
                 best_loss = epoch_loss
-                best_model_wts = copy.deepycopy(mode.state_dict())
-                
+                best_model_wts = copy.deepcopy(mode.state_dict())
+                #torch.save(model.state_dict(), save_path)
+            
+            print('{} epoch time: {:.4f}'.format(epoch, time.time() - since))
+ 
         print()
-        
+ 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed//60, time_elapsed%60))
     #print('Best Acc: {:.4f}'.format(best_acc))
@@ -138,8 +148,10 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './vae_linear.pt'
+    save_path = './conv_encoder.pt'
+    check_path = './conv_encoder_check.pt'
     model = Conv_Model()
+    model = model.to(device)
     
     criterion = loss_function
 
@@ -148,5 +160,5 @@ if __name__ == "__main__":
 
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_best = train_model(model, criterion, optimizer_ft, exp_lr_scheduler, num_epoch = 10)
+    model_best = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,check_path, num_epoch = 10)
     torch.save(model_best.state_dict(), save_path)

@@ -64,7 +64,7 @@ def loss_function(recon_x, x, mu, logvar):
 
     return BCE + KLD
 
-def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
+def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
     since = time.time()
     
     best_mode_wts = copy.deepcopy(model.state_dict())
@@ -74,7 +74,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
         print('-'*10)
         for phase in ['train', 'val']:
             if phase == 'train':
-                scheduler.step()
+                #scheduler.step()
                 model.train()
             else:
                 model.eval()
@@ -109,7 +109,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                         loss.backward()
                         optimizer.step()
                         
-                if proc % 640 == 0:
+                if proc % 6400 == 0:
                     print('processed photos are {}'.format(proc))
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
@@ -118,7 +118,13 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 
             epoch_loss = run_loss/len(data_loader[phase])
             epoch_acc = run_correct/len(data_loader[phase])
-            
+
+            torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'loss': epoch_loss
+            }, save_path) 
+
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
             
             # deep copy the model
@@ -126,9 +132,11 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
-                
+
+            print('{} epoch time: {:.4f}'.format(epoch, time.time() - since))
+    
         print()
-        
+ 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed//60, time_elapsed%60))
     #print('Best Acc: {:.4f}'.format(best_acc))
@@ -139,7 +147,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './vae_linear.pt'
+    save_path = './baseline1.pt'
+    check_path = './baseline_check1.pt'
     model = Base_Model()
     model = model.to(device)
     
@@ -148,7 +157,7 @@ if __name__ == "__main__":
     #optimizer_ft = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
     optimizer_ft = optim.Adam(model.parameters(), lr=1e-3)
 
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
+    #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_best = train_model(model, criterion, optimizer_ft, exp_lr_scheduler, num_epoch = 10)
+    model_best = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
     torch.save(model_best.state_dict(), save_path)
