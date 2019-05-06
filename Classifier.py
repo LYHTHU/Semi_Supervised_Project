@@ -107,8 +107,8 @@ def model_test(model, device, test_loader, log_interval=100):
             num_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
 
             if batch_idx % log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                print('Test : [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    batch_idx * len(data), len(train_loader.dataset),
                            100. * batch_idx / len(train_loader), loss.item()))
 
     # Compute the average test_loss

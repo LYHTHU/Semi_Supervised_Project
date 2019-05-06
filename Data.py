@@ -5,6 +5,7 @@ import torchvision
 from torchvision import datasets, models, transforms
 import matplotlib.pyplot as plt
 import os
+from torch.utils.data.sampler import SubsetRandomSampler
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -25,7 +26,7 @@ class Data:
     # Load and union the supervisd and unsupervised training data, ignoring labels
     # Input: transform
     # Return a DataLoader.
-    def load_train_data_mix(self, transform=None):
+    def load_train_data_mix(self, transform=None, fraction=1):
         print("Start loading mix")
         data_sup = torchvision.datasets.ImageFolder(root=self.sup_train_root_path, transform=transform)
         data_unsup = torchvision.datasets.ImageFolder(root=self.unsup_train_root_path, transform=transform)
@@ -40,7 +41,7 @@ class Data:
     # Load and union the supervised training data
     # Input: transform
     # Return a DataLoader.
-    def load_train_data_sup(self, transform=None):
+    def load_train_data_sup(self, transform=None, fraction=1):
         print("Start load supurvised training data")
         data = torchvision.datasets.ImageFolder(root=self.sup_train_root_path, transform=transform)
         loader = torch.utils.data.DataLoader(data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
@@ -50,7 +51,7 @@ class Data:
     # Load and union the supervised validation data
     # Input: transform
     # Return a DataLoader.
-    def load_val_data(self, transform=None):
+    def load_val_data(self, transform=None, fraction=1):
         print("Start load val")
         data = torchvision.datasets.ImageFolder(root=self.sup_val_root_path, transform=transform)
         loader = torch.utils.data.DataLoader(data, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
