@@ -19,8 +19,8 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 
 from SemiSupervised import SemiSupervised
-from modelVae_linear import Linear_Model
-from modelVae_convnet import Conv_Model
+#from modelVae_linear import Linear_Model
+#from modelVae_convnet import Conv_Model
 from base_model import Base_Model
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
@@ -35,7 +35,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.cuda = torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
 
@@ -116,8 +116,8 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 run_correct += torch.sum(labels.data == preds)
                 
                 
-            epoch_loss = run_loss/data_loader[phase]
-            epoch_acc = run_correct/data_loader[phase]
+            epoch_loss = run_loss/len(data_loader[phase])
+            epoch_acc = run_correct/len(data_loader[phase])
             
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
             
@@ -125,7 +125,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
-                best_model_wts = copy.deepycopy(model.state_dict())
+                best_model_wts = copy.deepcopy(model.state_dict())
                 
         print()
         
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     
     save_path = './vae_linear.pt'
     model = Base_Model()
+    model = model.to(device)
     
     criterion = nn.CrossEntropyLoss()
 
