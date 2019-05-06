@@ -9,6 +9,7 @@ from torchvision.utils import save_image
 from Data import Data
 import math
 import time
+from VaeModel import VAE
 
 parser = argparse.ArgumentParser(description='Classifier')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -31,7 +32,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 if args.cuda:
     print("Using GPU")
 
-kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
+# kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
 
 
 data = Data(batch_size=args.batch_size)
@@ -57,8 +58,10 @@ class Classifier(nn.Module):
         )
 
     def forward(self, x):
-        x = self.vae(x.view(-1, self.n_in))
+        mu, logvar = self.vae.encode(x)
+        x = self.vae.reparameterize(mu, logvar)
         # x = F.relu(self.fc1(x.view(-1, self.n_in)))
+        x = x.view(-1, self.n_latent)
         x = self.cls(x)
         return x
 
