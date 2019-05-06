@@ -7,44 +7,56 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
 
+import numpy as np
+
 from SemiSupervised import SemiSupervised
 
-class Linear_Model(nn.Module):
-    def __init__(self, x_dim=3*96*96, y_dim=3*96*96, encoder_dim=None, decoder_dim=None, latent_dim = 20):
-        super(Linear_Model, self).__init__()
-        self.encoder_dim = []
+class Conv_Model(nn.Module):
+    def __init__(self, y_dim=3*96*96, decoder_dim=None, latent_dim=20):
+        super(Conv_Model, self).__init__()
         self.decoder_dim = []
 
         # Architecture
         # TODO
         # encoder_dim is a list of dimension
-        if encoder_dim is None:
-            self.encoder_dim = [x_dim] + [4000, 200]
-        else:
-            self.encoder_dim = [x_dim] + encoder_dim
         
         if decoder_dim is None:
-            self.decoder_dim = [400, 6000]
+            self.decoder_dim = [latent_dim] + [200, 4000]
         else:
-            self.decoder_dim = decoder_dim
+            self.decoder_dim = [latent_dim] + decoder_dim
             
         #encoder
-        nets_en = [*self.encoder_dim]
-        linear_layers_en = [nn.Linear(nets_en[i-1], nets_en[i]) for i in range(1, len(nets_en))]
-        self.encoder_hidden = nn.ModuleList(linear_layers_en)
+        #nets_en = [*self.encoder_dim]
+        # input parameters: [[c_in, c_out, kernel_size, stride]]
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=5, stride=1), # 16* 92 * 92
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)) # 16 * 46 * 46
+        
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(16, 32, kernel_size=5, stride=1), # 32 * 42 * 42
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=3, padding = 0)) # 32 * 14 * 14
+        
+        #self.drop_out = nn.Dropout()
+        
+        self.fc1 = nn.Linear(14 * 14 * 32, 2*latent_dim)
+        
+        self.encoder_hidden = nn.ModuleList([self.layer1, self.layer2])
         
         # reparametrization for latent var
-        in_features = nets_en[-1]
+        in_features = 2*latent_dim
         out_features = latent_dim
+        
         self.mu = nn.Linear(in_features, out_features)
         self.log_var = nn.Linear(in_features, out_features)
         
         #decode
-        nets_de = [latent_dim, *self.decoder_dim]
-        linear_layers_de = [nn.Linear(nets_de[i-1], nets_de[i]) for i in range(1, len(nets_de))]
+        #nets_de = [self.encoder_dim[-1], *self.decoder_dim]
+        linear_layers_de = [nn.Linear(self.decoder_dim[i-1], self.decoder_dim[i]) for i in range(1, len(self.decoder_dim))]
         
         self.decoder_hidden = nn.ModuleList(linear_layers_de)
-        self.reconstruction = nn.Linear(nets_de[-1], y_dim)
+        self.reconstruction = nn.Linear(self.decoder_dim[-1], y_dim)
 
         # Load pre-trained model
         # self.load_weights('weights.pth')
@@ -74,45 +86,25 @@ class Linear_Model(nn.Module):
     def reparametrize(self, mu, log_var):
         std = torch.exp(0.5*log_var)
         eps = torch.randn_like(std)
-        #eps = torch.Tensor(torch.randn(mu.size()))
-        #print(eps.size())
-        #print(std.size())
         return mu + eps*std
 
     def forward(self, x):
         # TODO
-        x = x.view(-1, 3*96*96)
-        #data = x
-        for layer in self.encoder_hidden:
-            x = F.relu(layer(x))
+        for i, layer in enumerate(self.encoder_hidden):
+            #print(i)
+            x = layer(x)
         
-        print(x)
+        x = x.reshape(x.size(0), -1)
+        x = self.fc1(x)
+        
         # reparametrization
         mu = self.mu(x)
-        #print("mean is {}".format(mu))
-        log_var = self.log_var(x)
-        #print("variance is {}".format(log_var))
+        log_var = F.softplus(self.log_var(x))
         
         z = self.reparametrize(mu, log_var)
-        #print(z.size())
         
-        for i, layer in enumerate(self.decoder_hidden):
-            data = z
-            z = layer(z)
-            if (z != z).any() == 1:
-                print(data)
-                print(z)
-                print(self.decoder_hidden[i])
-                print("Not Relu")
-                break
-            z = F.relu(z)
-            if (z != z).any() == 1:
-                print(z)
-                print(self.decoder_hidden[i])
-                print("Relu")
-                break
-     
-        
+        for layer in self.decoder_hidden:
+            z = F.relu(layer(z))
+            
         z = self.reconstruction(z)
-        
         return torch.sigmoid(z), mu, log_var
