@@ -21,6 +21,7 @@ from torch.optim import lr_scheduler
 from SemiSupervised import SemiSupervised
 from modelVae_linear import Linear_Model
 from modelVae_convnet import Conv_Model
+from modelauto_en import AutoEn_Model
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
@@ -148,9 +149,9 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './conv_encoder.pt'
-    check_path = './conv_encoder_check.pt'
-    model = Conv_Model()
+    save_path = './autoen_encoder.pt'
+    check_path = './autoen_encoder_check.pt'
+    model = AutoEn_Model()
     model = model.to(device)
     
     criterion = loss_function
