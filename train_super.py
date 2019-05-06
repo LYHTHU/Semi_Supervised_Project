@@ -44,8 +44,11 @@ device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 semi = SemiSupervised(batch_size=args.batch_size)
-train_loader = semi.load_train_data_mix(transform=transforms.ToTensor())
+train_loader = semi.load_train_data_sup(transform=transforms.ToTensor())
 test_loader = semi.load_val_data(transform=transforms.ToTensor())
+data_loader = {}
+data_loader['train'] = train_loader
+data_loader['val'] = test_loader
 
 def loss_function(recon_x, x, mu, logvar):
     #print(recon_x.size())
@@ -69,7 +72,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
     for epoch in range(num_epoch):
         print("Epoch {}/{}".format(epoch, num_epoch-1))
         print('-'*10)
-        for phase in ['train']:
+        for phase in ['train', 'val']:
             if phase == 'train':
                 scheduler.step()
                 model.train()
@@ -80,7 +83,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
             run_correct = 0
             proc = 0
             
-            for inputs, labels in train_loader:
+            for inputs, labels in data_loader[phase]:
                 proc += args.batch_size
                 
                 inputs = inputs.to(device)
@@ -113,16 +116,16 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 run_correct += torch.sum(labels.data == preds)
                 
                 
-            epoch_loss = run_loss/dataset_sizes[phase]
-            epoch_acc = run_correct/dataset_sizes[phase]
+            epoch_loss = run_loss/data_loader[phase]
+            epoch_acc = run_correct/data_loader[phase]
             
             print('{} Loss: {:.4f}'.format(phase, epoch_loss))
             
             # deep copy the model
                 
-            if epoch_acc > best_acc:
+            if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
-                best_model_wts = copy.deepycopy(mode.state_dict())
+                best_model_wts = copy.deepycopy(model.state_dict())
                 
         print()
         
