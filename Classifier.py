@@ -22,6 +22,8 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--clip', type=float, default=0.25,
+                    help='gradient clipping')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -53,6 +55,7 @@ class Classifier(nn.Module):
         self.cls = nn.Sequential(
             nn.Linear(self.n_latent, 4000),
             nn.ReLU(),
+            nn.BatchNorm1d(num_features=4000),
             nn.Linear(4000, self.n_class),
             nn.Sigmoid()
         )
@@ -68,25 +71,34 @@ class Classifier(nn.Module):
 
 def train(model, device, train_loader, optimizer, epoch, log_interval=100):
     model.train()
+    train_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
+
         loss = F.nll_loss(output, target)
         loss.backward()
+
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+        # for p in model.parameters():
+        #     p.data.add_(-20, p.grad.data)
+
+        train_loss += loss.item()
         optimizer.step()
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                        100. * batch_idx / len(train_loader), loss.item()))
+    return train_loss
 
 
-def model_test(model, device, test_loader):
+def model_test(model, device, test_loader, log_interval=100):
     model.eval()
     test_loss = 0
     num_correct = 0
     with torch.no_grad():
-        for data, target in test_loader:
+        for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
             loss = F.nll_loss(output, target, reduction="sum")
@@ -94,20 +106,31 @@ def model_test(model, device, test_loader):
             pred = output.data.max(1, keepdim=True)[1]  # get the index of the max log-probability
             num_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
 
+            if batch_idx % log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss.item()))
+
     # Compute the average test_loss
     avg_test_loss = test_loss / len(test_loader.dataset)
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(avg_test_loss, num_correct, len(test_loader.dataset), 100. * num_correct / len(test_loader.dataset)))
 
 
-model = Classifier().to(device)
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-
-for epoch in range(1, 10 + 1):
-    start_time = time.time()
-    # Train model
-    train(model, device, train_loader, optimizer, epoch)
-    end_time = time.time()
-    print("Epoch:{}, running {} seconds", epoch, end_time-start_time)
-    # Test model
-    # model_test(model, device, test_loader)
+if __name__ == '__main__':
+    model = Classifier().to(device)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.5)
+    last_loss = math.inf
+    params_path = "classifier.pth"
+    for epoch in range(1, 10 + 1):
+        start_time = time.time()
+        # Train model
+        train_loss = train(model, device, train_loader, optimizer, epoch)
+        if train_loss < last_loss:
+            last_loss = train_loss
+            torch.save(model, params_path)
+        end_time = time.time()
+        print("Epoch:{}, running {} seconds", epoch, end_time-start_time)
+        # Test model
+    model = torch.load(params_path)
+    model_test(model, device, test_loader)
