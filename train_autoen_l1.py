@@ -150,12 +150,12 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './autoen_encoder_l2.pt'
-    check_path = './autoen_encoder_check_l2.pt'
+    save_path = './autoen_encoder_l1.pt'
+    check_path = './autoen_encoder_check_l1.pt'
     model = AutoEn_Model()
     model = model.to(device)
     
-    criterion = nn.MSELoss()
+    criterion = nn.L1Loss()
 
     #optimizer_ft = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
     optimizer_ft = optim.Adam(model.parameters(), lr=1e-3)
