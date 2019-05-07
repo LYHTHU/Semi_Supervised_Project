@@ -30,7 +30,7 @@ data_transforms = {
     ]),
 }
 
-data_dir = "../ssl_data_96" + "/supervised"
+data_dir = "/scratch/yc3329/ssl_data_96" + "/supervised"
 
 b_size = 8
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
@@ -44,7 +44,7 @@ class_names = image_datasets['train'].classes
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
+def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
     since = time.time()
     
     best_mode_wts = copy.deepcopy(model.state_dict())
@@ -52,9 +52,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
     for epoch in range(num_epoch):
         print("Epoch {}/{}".format(epoch, num_epoch-1))
         print('-'*10)
-        for phase in ['train']:
+        for phase in ['train', 'val']:
             if phase == 'train':
-                scheduler.step()
+                #scheduler.step()
                 model.train()
             else:
                 model.eval()
@@ -85,9 +85,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-                        
-                if proc % 640 == 0:
-                    print('processed photos are {}'.format(proc))
+
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
                 run_correct += torch.sum(labels.data == preds)
@@ -95,7 +93,12 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
                 
             epoch_loss = run_loss/dataset_sizes[phase]
             epoch_acc = run_correct/dataset_sizes[phase]
-            
+
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'loss': epoch_loss
+            }, save_path)
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
             
             # deep copy the model
@@ -117,7 +120,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
 if __name__ == '__main__':
     
     save_path = './ft_resnet152.pt'
-    model_ft = models.resnet152(pretrained = True)
+    check_path = './ft_resnet152_check.pt'
+    
+    model_ft = models.resnet152(pretrained = False)
     num_ftrs = model_ft.fc.in_features
 
     n_class = 1000
@@ -128,7 +133,7 @@ if __name__ == '__main__':
 
     optimizer_ft = optim.SGD(model_ft.parameters(), lr = 0.001, momentum = 0.9)
 
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
+    #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epoch = 10)
+    model_ft = train_model(model_ft, criterion, optimizer_ft, num_epoch = 10)
     torch.save(model_ft.state_dict(), save_path)

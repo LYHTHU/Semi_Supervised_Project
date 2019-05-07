@@ -121,9 +121,10 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'loss': epoch_loss
-            }, save_path) 
+            }, save_path)
 
-            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss,
+                                                       epoch_acc))
             
             # deep copy the model
                 
