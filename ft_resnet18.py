@@ -135,5 +135,5 @@ if __name__ == '__main__':
 
     #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_ft = train_model(model_ft, criterion, optimizer_ft, num_epoch = 10)
+    model_ft = train_model(model_ft, criterion, optimizer_ft, check_path, num_epoch = 10)
     torch.save(model_ft.state_dict(), save_path)
