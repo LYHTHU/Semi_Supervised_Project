@@ -105,9 +105,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-                        
-                if proc % 6400 == 0:
-                    print('processed photos are {}'.format(proc))
+
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
                 #run_correct += torch.sum(labels.data == preds)
@@ -148,8 +146,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './conv_encoder1.pt'
-    check_path = './conv_encoder_check1.pt'
+    save_path = './conv_encoder2.pt'
+    check_path = './conv_encoder_check2.pt'
     model = Conv_Model()
     model = model.to(device)
     

@@ -101,7 +101,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
-                best_model_wts = copy.deepycopy(mode.state_dict())
+                best_model_wts = copy.deepycopy(model.state_dict())
                 
         print()
         
@@ -116,14 +116,14 @@ def train_model(model, criterion, optimizer, scheduler, num_epoch = 10):
 # pass in parameter
 if __name__ == '__main__':
     
-    save_path = './ft_resnet18.pt'
-    model_ft = models.resnet18(pretrained = True)
+    save_path = './ft_resnet152.pt'
+    model_ft = models.resnet152(pretrained = True)
     num_ftrs = model_ft.fc.in_features
 
     n_class = 1000
     model_ft.fc = nn.Linear(num_ftrs, n_class)
 
-	model_ft = model_ft.to(device)
+    model_ft = model_ft.to(device)
     criterion = nn.CrossEntropyLoss()
 
     optimizer_ft = optim.SGD(model_ft.parameters(), lr = 0.001, momentum = 0.9)

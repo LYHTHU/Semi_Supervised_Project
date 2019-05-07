@@ -107,9 +107,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
-                        
-                if proc % 6400 == 0:
-                    print('processed photos are {}'.format(proc))
+
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
                 #run_correct += torch.sum(labels.data == preds)
@@ -150,8 +148,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './autoen_encoder_l2.pt'
-    check_path = './autoen_encoder_check_l2.pt'
+    save_path = './autoen_encoder2_l2.pt'
+    check_path = './autoen_encoder2_check_l2.pt'
     model = AutoEn_Model()
     model = model.to(device)
     
