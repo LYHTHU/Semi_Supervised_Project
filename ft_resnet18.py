@@ -121,7 +121,7 @@ if __name__ == '__main__':
     
     save_path = './ft_resnet152.pt'
     check_path = './ft_resnet152_check.pt'
-    
+
     model_ft = models.resnet152(pretrained = False)
     num_ftrs = model_ft.fc.in_features
 
