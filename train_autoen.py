@@ -133,7 +133,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                 
             if epoch_loss < best_loss:
                 best_loss = epoch_loss
-                best_model_wts = copy.deepcopy(mode.state_dict())
+                best_model_wts = copy.deepcopy(model.state_dict())
                 #torch.save(model.state_dict(), save_path)
             
             print('{} epoch time: {:.4f}'.format(epoch, time.time() - since))

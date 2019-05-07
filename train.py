@@ -131,7 +131,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                 
             if epoch_loss < best_loss:
                 best_loss = epoch_loss
-                best_model_wts = copy.deepcopy(mode.state_dict())
+                best_model_wts = copy.deepcopy(model.state_dict())
                 #torch.save(model.state_dict(), save_path)
             
             print('{} epoch time: {:.4f}'.format(epoch, time.time() - since))
@@ -148,8 +148,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = './conv_encoder.pt'
-    check_path = './conv_encoder_check.pt'
+    save_path = './conv_encoder1.pt'
+    check_path = './conv_encoder_check1.pt'
     model = Conv_Model()
     model = model.to(device)
     
@@ -160,9 +160,5 @@ if __name__ == "__main__":
 
     #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    #model_best = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,check_path,
-    # num_epoch = 10)
-
-    model_best = train_model(model, criterion, optimizer_ft,
-                             check_path, num_epoch = 10)
+    model_best = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
     torch.save(model_best.state_dict(), save_path)
