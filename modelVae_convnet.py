@@ -12,7 +12,7 @@ import numpy as np
 from SemiSupervised import SemiSupervised
 
 class Conv_Model(nn.Module):
-    def __init__(self, y_dim=3*96*96, decoder_dim=None, latent_dim=20):
+    def __init__(self, y_dim=3*96*96, decoder_dim=None, latent_dim=20, pretrained=False):
         super(Conv_Model, self).__init__()
         self.decoder_dim = []
 
@@ -59,7 +59,8 @@ class Conv_Model(nn.Module):
         self.reconstruction = nn.Linear(self.decoder_dim[-1], y_dim)
 
         # Load pre-trained model
-        # self.load_weights('weights.pth')
+        if pretrained:
+            self.load_weights('./conv_encoder_check.pt', cuda=torch.cuda.is_available())
 
     def load_weights(self, pretrained_model_path, cuda=True):
         # Load pretrained model
@@ -87,6 +88,18 @@ class Conv_Model(nn.Module):
         std = torch.exp(0.5*log_var)
         eps = torch.randn_like(std)
         return mu + eps*std
+    
+    def encode(self, x):
+        for i, layer in enumerate(self.encoder_hidden):
+            #print(i)
+            x = layer(x)
+        
+        x = x.reshape(x.size(0), -1)
+        x = self.fc1(x)
+        
+        # reparametrization
+        mu = self.mu(x)
+        return mu
 
     def forward(self, x):
         # TODO
