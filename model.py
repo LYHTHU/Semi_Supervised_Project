@@ -1,15 +1,18 @@
 import torch
 import torch.nn as nn
 
+from torchvision import datasets, models, transforms
+
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, pretrained = False):
         super(Model, self).__init__()
 
         # Architecture
         # TODO
+         
 
         # Load pre-trained model
-        self.load_weights('weights.pth')
+        self.load_weights('./weights/ft_resnet152_ep9.pt')
 
     def load_weights(self, pretrained_model_path, cuda=True):
         # Load pretrained model

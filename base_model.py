@@ -4,8 +4,6 @@ import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
-from torchvision import datasets, transforms
-from torchvision.utils import save_image
 
 import numpy as np
 
@@ -38,7 +36,7 @@ class Base_Model(nn.Module):
         self.encoder_hidden = nn.ModuleList([self.layer1, self.layer2, self.drop_out])
 
         # Load pre-trained model
-        # self.load_weights('weights.pth')
+        self.load_weights('./baseline_weights.pt', cuda=torch.cuda.is_available())
 
     def load_weights(self, pretrained_model_path, cuda=True):
         # Load pretrained model

@@ -1,10 +1,11 @@
-from model import Model
+#from model import Model
 import argparse
 import json
 import torch
+import torch.nn as nn
 
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
+from torchvision import datasets, models, transforms
 
 def load_data(data_dir, batch_size, split):
     """ Method returning a data loader for labeled data """
@@ -60,7 +61,7 @@ if __name__ == '__main__':
 
     # Define arguments
     parser = argparse.ArgumentParser(description='Evaluation')
-    parser.add_argument('--data_dir', type=str, default='./data',
+    parser.add_argument('--data_dir', type=str, default='../ssl_data_96',
                         help='location of data')
     parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
@@ -83,7 +84,18 @@ if __name__ == '__main__':
         torch.cuda.manual_seed_all(args.seed)
 
     # Load pre-trained model
-    model = Model().to(args.device) # DO NOT modify this line - if your Model() takes arguments, they should have default values
+
+    model = models.resnet152(pretrained = False)
+    num_ftrs = model.fc.in_features
+
+    n_class = 1000
+    model.fc = nn.Linear(num_ftrs, n_class)
+
+    model = model.to(args.device)
+    pretrained_model = torch.load(f = './weights/ft_resnet152_ep9.pt', map_location="cuda" if args.cuda else "cpu")
+    with torch.no_grad():
+            model.load_state_dict(pretrained_model, strict=True)
+    #model = Model.to(args.device) # DO NOT modify this line - if your Model() takes arguments, they should have default values
     print('n parameters: %d' % sum([m.numel() for m in model.parameters()]))
 
     # Load data
