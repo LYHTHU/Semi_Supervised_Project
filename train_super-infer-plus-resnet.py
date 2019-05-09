@@ -122,7 +122,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'loss': epoch_loss
-            }, save_path)
+            }, './'+save_path+str(epoch)+'.pt')
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss,
                                                        epoch_acc))
@@ -141,14 +141,14 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed//60, time_elapsed%60))
     #print('Best Acc: {:.4f}'.format(best_acc))
         
-    model.load(best_model_wts)
+    #model.load(best_model_wts)
         
-    return model
+    return best_model_wts
 
 if __name__ == "__main__":
     
     save_path = './infer.pt'
-    check_path = './infer.pt'
+    check_path = 'infer_check'
     model = Infer_model()
     model = model.to(device)
     
@@ -159,5 +159,5 @@ if __name__ == "__main__":
 
     #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_best = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
-    torch.save(model_best.state_dict(), save_path)
+    model_best_weights = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
+    torch.save(model_best_weights, save_path)
