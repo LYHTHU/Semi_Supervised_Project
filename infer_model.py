@@ -14,7 +14,7 @@ from SemiSupervised import SemiSupervised
 from modelVae_convnet import Conv_Model
 
 class Infer_model(nn.Module):
-    def __init__(self, latent=20):
+    def __init__(self, latent=20, pretrained=True, pretrained_model_path='../weights/infer_weights.pt'):
         super(Infer_model, self).__init__()
         
         self.ft = Conv_Model(pretrained=True)
@@ -35,6 +35,9 @@ class Infer_model(nn.Module):
         self.fc1 = nn.Linear(14 * 14 * 64 + self.latent, 1000)
         
         self.classification = nn.ModuleList([self.layer1, self.layer2, self.drop_out])
+
+        if pretrained:
+            self.load_weights(pretrained_model_path, cuda=torch.cuda.is_available())
         
     def forward(self, x):
         add_feature = self.ft.encode(x)
