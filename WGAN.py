@@ -16,16 +16,38 @@ import math
 import time
 
 class WGAN(nn.Module):
-    def __init__(self, data, noise_dim, dim_factor):
+    def __init__(self, data, noise_dim, dim_factor, model_path=None):
         super(WGAN, self).__init__()
         self.data = data
         self.generator = Generator(image_shape=(data.ch, data.h, data.w),
                                    noise_dim=noise_dim, dim_factor=dim_factor)
         self.discriminator = Discriminator(image_shape=(data.ch, data.h, data.w),
                                            dim_factor=dim_factor)
+        if model_path:
+            self.load_weights(model_path)
 
-    def load_weights(self, model_path):
-        pass
+    def load_weights(self, model_path, cuda=True):
+        pretrained_model = torch.load(f=model_path, map_location="cuda" if cuda else "cpu")
+        # Load pre-trained weights in current model
+        with torch.no_grad():
+            self.discriminator.load_state_dict(pretrained_model, strict=True)
+
+        # Debug loading
+        print('Parameters found in pretrained model:')
+        pretrained_layers = pretrained_model.keys()
+        for l in pretrained_layers:
+            print('\t' + l)
+        print('')
+
+        for name, module in self.discriminator.state_dict().items():
+            if name in pretrained_layers:
+                assert torch.equal(pretrained_model[name].cpu(), module.cpu())
+                print('{} have been loaded correctly in current model.'.format(name))
+            else:
+                raise ValueError("state_dict() keys do not match")
+
+    def save(self, model_path):
+        torch.save(self.discriminator.state_dict(), model_path)
 
     def forward(self, x):
         return self.discriminator.forward(x)
@@ -42,9 +64,10 @@ def unsup_train(model, device, learning_rate, batch_size, noise_dim, epochs, K, 
     gen_noise_tensor = gen_noise_tensor.to(device)
     gp_alpha_tensor = gp_alpha_tensor.to(device)
     # wrap noise as variable so we can backprop through the graph
-    gen_noise_var = Variable(gen_noise_tensor, requires_grad=False)
+    gen_noise_var = Variable(gen_noise_tensor, requires_grad=False).to(device)
     # calculate batches per epoch
     bpe = len(data_loader.dataset) // batch_size
+    print("total batch number per epoch: %i" % (bpe))
     # create lists to store training loss
     gen_loss = []
     disc_loss = []
@@ -54,12 +77,14 @@ def unsup_train(model, device, learning_rate, batch_size, noise_dim, epochs, K, 
         print("-> Entering epoch %i out of %i" % (i, epochs))
         # iterate over data
         for batch_idx, (data, _) in enumerate(data_loader):
-            if batch_idx % 2 == 0:
-                print("process: {:.2f}%".format((batch_idx+1)*100/bpe))
+            if (batch_idx+1) % 500 == 0:
+                print("process: {:.2f}%, batch {} out of {}"\
+                    .format((batch_idx+1)*100/bpe, batch_idx+1, bpe))
             # wrap data in torch Tensor
             X_tensor = torch.Tensor(data).to(device)
-            X_var = Variable(X_tensor, requires_grad=False)
+            X_var = Variable(X_tensor, requires_grad=False).to(device)
             if (batch_idx % K) == (K - 1):
+                #print("train generator.")
                 # train generator
                 enable_gradients(model.generator)  # enable gradients for gen net
                 disable_gradients(model.discriminator)  # saves computation on backprop
@@ -68,7 +93,7 @@ def unsup_train(model, device, learning_rate, batch_size, noise_dim, epochs, K, 
                 loss.backward()
                 gen_optimizer.step()
                 # append loss to list
-                gen_loss.append(loss.data)
+                gen_loss.append(loss.data.cpu().numpy())
             # train discriminator
             enable_gradients(model.discriminator)  # enable gradients for disc net
             disable_gradients(model.generator)  # saves computation on backprop
@@ -78,16 +103,18 @@ def unsup_train(model, device, learning_rate, batch_size, noise_dim, epochs, K, 
             loss.backward()
             disc_optimizer.step()
             # append loss to list
-            disc_loss.append(loss.data)
+            disc_loss.append(loss.data.cpu().numpy())
+
         # calculate and print mean discriminator loss for past epoch
         print("Epoch time: {:.2f}s".format(time.monotonic()-time_epoch))
-        disc_loss = np.array(disc_loss[-bpe:]).mean()
-        print("Mean discriminator loss over epoch: %.2f" % mean_disc_loss)
-        if (disc_loss < last_loss):
-            last_loss = disc_loss
-            torch.save(model, params_path)
-        np.save('gen_loss', gen_loss)
-        np.save('disc_loss', disc_loss)
+        mean_loss = np.array(disc_loss[-bpe:]).mean()
+        print("Mean discriminator loss over epoch: %.2f" % mean_loss)
+        if (mean_loss < last_loss):
+            last_loss = mean_loss
+        model.save(params_path)
+    np.save('gen_loss', gen_loss)
+    np.save('disc_loss', disc_loss)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='On WGAN')
@@ -128,12 +155,13 @@ if __name__ == '__main__':
 
     kwargs = {'num_workers': 8, 'pin_memory': True} if args.cuda else {}
 
-    #data = Data(path="/scratch/hl3420/ssl_data_96/", batch_size=args.batch_size)
-    data = Data(batch_size=args.batch_size)
+    data = Data(path="/scratch/hl3420/ssl_data_96/", batch_size=args.batch_size)
+    #data = Data(batch_size=args.batch_size)
     test_loader = data.load_val_data(transform=transforms.ToTensor())
 
     wgan = WGAN(data, noise_dim=args.noise_dim, dim_factor=args.dim_factor).to(device)
+    #wgan.load_weights("wgan_best.pth")
     unsup_train(model=wgan, device=device, learning_rate=args.learning_rate,
                 batch_size=args.batch_size, noise_dim=args.noise_dim,
                 epochs=args.epochs, K=args.K, lmbda=args.lmbda,
-                params_path='wgan_best.pth')
+                params_path='wgan_best-4.pth')
