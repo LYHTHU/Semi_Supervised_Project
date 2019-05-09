@@ -19,9 +19,10 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 
 from SemiSupervised import SemiSupervised
-from modelVae_linear import Linear_Model
-from modelVae_convnet import Conv_Model
-from modelVae_convnet_plus import Conv_Model_plus
+#from modelVae_linear import Linear_Model
+#from modelVae_convnet import Conv_Model
+from base_model import Base_Model
+from infer_model import Infer_model
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
@@ -35,7 +36,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.cuda = torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
 
@@ -44,8 +45,11 @@ device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 semi = SemiSupervised(batch_size=args.batch_size)
-train_loader = semi.load_train_data_mix(transform=transforms.ToTensor())
+train_loader = semi.load_train_data_sup(transform=transforms.ToTensor())
 test_loader = semi.load_val_data(transform=transforms.ToTensor())
+data_loader = {}
+data_loader['train'] = train_loader
+data_loader['val'] = test_loader
 
 def loss_function(recon_x, x, mu, logvar):
     #print(recon_x.size())
@@ -65,28 +69,26 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
     since = time.time()
     
     best_mode_wts = copy.deepcopy(model.state_dict())
-    best_loss = -1.0
-    
+    best_acc = 0.0
     for epoch in range(num_epoch):
         print("Epoch {}/{}".format(epoch, num_epoch-1))
         print('-'*10)
-        for phase in ['train']:
+        for phase in ['train', 'val']:
             if phase == 'train':
                 #scheduler.step()
                 model.train()
             else:
-                continue
                 model.eval()
             
             run_loss = 0.0
-            #run_correct = 0
+            run_correct = 0
             proc = 0
             
-            for inputs, _ in train_loader:
+            for inputs, labels in data_loader[phase]:
                 proc += args.batch_size
                 
                 inputs = inputs.to(device)
-                #labels = labels.to(device)
+                labels = labels.to(device)
                 
                 #zeros para
                 optimizer.zero_grad()
@@ -94,14 +96,15 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                 #forward
                 #track history if and only if in training phase
                 with torch.set_grad_enabled(phase == 'train'):
-                    recon_x, mu, logvar = model(inputs)
+                    outputs = model(inputs)
                     #print(recon_x.size())
-                    #print(x.size())
-                    #_, preds = torch.max(outputs, 1)
+                    
+                    _, preds = torch.max(outputs, 1)
                     #print(outputs.size())
                     #print(preds)
                     # 
-                    loss = criterion(recon_x, inputs.view(-1, 3*96*96), mu, logvar)
+                    loss = criterion(outputs, labels)
+                    
                     # backwarda and optimize only in training
                     if phase == 'train':
                         loss.backward()
@@ -109,61 +112,52 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
-                #run_correct += torch.sum(labels.data == preds)
+                run_correct += torch.sum(labels.data == preds)
                 
                 
-            epoch_loss = run_loss/len(train_loader)
-            #epoch_acc = run_correct/dataset_sizes[phase]
-            
-            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
-            
+            epoch_loss = run_loss/len(data_loader[phase])
+            epoch_acc = run_correct/len(data_loader[phase])
+
+            torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'loss': epoch_loss
+            }, save_path)
+
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss,
+                                                       epoch_acc))
             
             # deep copy the model
-            if best_loss < 0:
-                best_loss = epoch_loss
-                best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'loss': epoch_loss
-                }, str(epoch)+save_path)
-                #torch.save(model.state_dict(), save_path)
                 
-            if epoch_loss < best_loss:
-                best_loss = epoch_loss
+            if phase == 'val' and epoch_acc > best_acc:
+                best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'loss': epoch_loss
-                }, str(epoch)+save_path)
-                #torch.save(model.state_dict(), save_path)
-            
+
             print('{} epoch time: {:.4f}'.format(epoch, time.time() - since))
- 
+    
         print()
  
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed//60, time_elapsed%60))
     #print('Best Acc: {:.4f}'.format(best_acc))
         
-    #model.load(best_model_wts)
+    model.load(best_model_wts)
         
-    return best_mode_wts
+    return model
 
 if __name__ == "__main__":
     
-    save_path = './conv_encoder_plus.pt'
-    check_path = './conv_encoder_plus_check.pt'
-    model = Conv_Model_plus()
+    save_path = './infer.pt'
+    check_path = './infer.pt'
+    model = Infer_model()
     model = model.to(device)
     
-    criterion = loss_function
+    criterion = nn.CrossEntropyLoss()
 
     #optimizer_ft = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
     optimizer_ft = optim.Adam(model.parameters(), lr=1e-3)
 
     #exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size = 7, gamma = 0.1)
 
-    model_best_weights = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
-    torch.save(model_best_weights, save_path)
+    model_best = train_model(model, criterion, optimizer_ft, check_path, num_epoch = 10)
+    torch.save(model_best.state_dict(), save_path)
