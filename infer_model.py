@@ -14,7 +14,7 @@ from SemiSupervised import SemiSupervised
 from modelVae_convnet import Conv_Model
 
 class Infer_model(nn.Module):
-    def __init__(self, latent=256, pretrained=False, pretrained_model_path='/scratch/hl3420/infer_conv_v611.pt'):
+    def __init__(self, latent=256, pretrained=False, pretrained_model_path='./models/infer_conv_v8.pt'):
         super(Infer_model, self).__init__()
 
         self.ft = Conv_Model(pretrained=True)

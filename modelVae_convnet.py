@@ -60,7 +60,7 @@ class Conv_Model(nn.Module):
 
         # Load pre-trained model
         if pretrained:
-            self.load_weights('/scratch/hl3420/conv_encoder11_weights.pt', cuda=torch.cuda.is_available())
+            self.load_weights('./models/conv_encoder11_weights.pt', cuda=torch.cuda.is_available())
 
     def load_weights(self, pretrained_model_path, cuda=True):
         # Load pretrained model

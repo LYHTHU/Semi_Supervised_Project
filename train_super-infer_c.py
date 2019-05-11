@@ -25,10 +25,10 @@ from modelVae_convnet import Conv_Model
 from infer_model import Infer_model
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
-parser.add_argument('--batch-size', type=int, default=256, metavar='N',
+parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                    help='number of epochs to train (default: 10)')
+parser.add_argument('--epochs', type=int, default=20, metavar='N',
+                    help='number of epochs to train (default: 20)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
@@ -70,8 +70,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
     #best_mode_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    for epoch in range(6, num_epoch):
-        print("Epoch {}/{}".format(epoch, num_epoch-1))
+    for epoch in range(1, num_epoch+1):
+        print("Epoch {}/{}".format(epoch, num_epoch))
         print('-'*10)
         for phase in ['train', 'val']:
             if phase == 'train':
@@ -143,13 +143,13 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
 
-    save_path = '/scratch/hl3420/infer_conv_v8.pt'
+    save_path = './models/infer_conv_v8.pt'
     model = Infer_model()
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
 
     #optimizer_ft = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
-    optimizer_ft = optim.Adam(model.parameters(), lr=1e-3, betas=(0.5, 0.99))
+    optimizer_ft = optim.Adam(model.parameters(), lr=3e-4, betas=(0.5, 0.99))
 
-    train_model(model, criterion, optimizer_ft, save_path, num_epoch = 20)
+    train_model(model, criterion, optimizer_ft, save_path, num_epoch = args.epochs)
