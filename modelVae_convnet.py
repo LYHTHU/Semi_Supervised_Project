@@ -14,51 +14,48 @@ from SemiSupervised import SemiSupervised
 class Conv_Model(nn.Module):
     def __init__(self, y_dim=3*96*96, decoder_dim=None, latent_dim=256, pretrained=False):
         super(Conv_Model, self).__init__()
+        self.dim_factor = 16
         self.decoder_dim = []
-
-        # Architecture
-        # TODO
-        # encoder_dim is a list of dimension
-
-        if decoder_dim is None:
-            self.decoder_dim = [latent_dim] + [1024, 9096]
-        else:
-            self.decoder_dim = [latent_dim] + decoder_dim
 
         #encoder
         #nets_en = [*self.encoder_dim]
         # input parameters: [[c_in, c_out, kernel_size, stride]]
         self.layer1 = nn.Sequential(
             nn.ZeroPad2d(2),
-            nn.Conv2d(3, 16, kernel_size=5, stride=2), # 16* 48 * 48
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2)) # 16 * 24 * 24
+            nn.Conv2d(3, self.dim_factor, kernel_size=5, stride=2),
+            nn.ReLU()) # 16* 48 * 48
 
         self.layer2 = nn.Sequential(
             nn.ZeroPad2d(2),
-            nn.Conv2d(16, 32, kernel_size=5, stride=2), # 32 * 12 * 12
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2)) # 32 * 6 * 6
+            nn.Conv2d(self.dim_factor, self.dim_factor, kernel_size=5, stride=2), # 32 * 42 * 42
+            nn.ReLU()) # 16 * 24 * 24
 
-        #self.drop_out = nn.Dropout()
+        self.layer3 = nn.Sequential(
+            nn.ZeroPad2d(2),
+            nn.Conv2d(self.dim_factor, self.dim_factor*2, kernel_size=5, stride=2), # 32 * 42 * 42
+            nn.ReLU()) # 32 * 12 * 12
 
-        self.fc1 = nn.Linear(14 * 14 * 32, 2*latent_dim)
-
-        self.encoder_hidden = nn.ModuleList([self.layer1, self.layer2])
-
+        self.encoder_hidden = nn.ModuleList([self.layer1, self.layer2, self.layer3])
+        #self.fc1 = nn.Linear(32 * 6 * 6, 2*latent_dim)
         # reparametrization for latent var
-        in_features = 2*latent_dim
+        in_features = self.dim_factor * 2 * 12 * 12
         out_features = latent_dim
 
-        self.mu = nn.Linear(in_features, out_features)
-        self.log_var = nn.Linear(in_features, out_features)
+        self.mu = nn.Linear(in_features, latent_dim)
+        self.log_var = nn.Linear(in_features, latent_dim)
 
         #decode
         #nets_de = [self.encoder_dim[-1], *self.decoder_dim]
-        linear_layers_de = [nn.Linear(self.decoder_dim[i-1], self.decoder_dim[i]) for i in range(1, len(self.decoder_dim))]
+        self.delinear = nn.Linear(latent_dim, in_features)
+        self.deconv1 = nn.ConvTranspose2d(self.dim_factor*2, self.dim_factor,
+                                          4, stride=2, padding=1)
+        self.deconv2 = nn.ConvTranspose2d(self.dim_factor, self.dim_factor,
+                                          4, stride=2, padding=1)
+        self.deconv3 = nn.ConvTranspose2d(self.dim_factor, 3,
+                                          4, stride=2, padding=1)
 
-        self.decoder_hidden = nn.ModuleList(linear_layers_de)
-        self.reconstruction = nn.Linear(self.decoder_dim[-1], y_dim)
+        self.decoder_hidden = nn.ModuleList([self.deconv1, self.deconv2])
+        #self.reconstruction = nn.Linear(self.decoder_dim[-1], y_dim)
 
         # Load pre-trained model
         if pretrained:
@@ -96,8 +93,8 @@ class Conv_Model(nn.Module):
             #print(i)
             x = layer(x)
 
-        x = x.reshape(x.size(0), -1)
-        x = self.fc1(x)
+        x = x.view(x.size(0), -1)
+        #x = self.fc1(x)
 
         # reparametrization
         mu = self.mu(x)
@@ -109,8 +106,8 @@ class Conv_Model(nn.Module):
             #print(i)
             x = layer(x)
 
-        x = x.reshape(x.size(0), -1)
-        x = self.fc1(x)
+        x = x.view(x.size(0), -1)
+        #x = self.fc1(x)
 
         # reparametrization
         mu = self.mu(x)
@@ -118,8 +115,10 @@ class Conv_Model(nn.Module):
 
         z = self.reparametrize(mu, log_var)
 
+        z = F.relu(self.delinear(z))
+        z = z.view(z.size(0), -1, 12, 12)
         for layer in self.decoder_hidden:
             z = F.relu(layer(z))
 
-        z = self.reconstruction(z)
+        z = self.deconv3(z)
         return torch.sigmoid(z), mu, log_var
