@@ -29,14 +29,16 @@ class Conv_Model(nn.Module):
         #nets_en = [*self.encoder_dim]
         # input parameters: [[c_in, c_out, kernel_size, stride]]
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=5, stride=1), # 16* 92 * 92
+            nn.ZeroPad2d(2),
+            nn.Conv2d(3, 16, kernel_size=5, stride=2), # 16* 48 * 48
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2)) # 16 * 46 * 46
+            nn.MaxPool2d(kernel_size=2, stride=2)) # 16 * 24 * 24
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=5, stride=1), # 32 * 42 * 42
+            nn.ZeroPad2d(2),
+            nn.Conv2d(16, 32, kernel_size=5, stride=2), # 32 * 12 * 12
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=3, padding = 0)) # 32 * 14 * 14
+            nn.MaxPool2d(kernel_size=2, stride=2)) # 32 * 6 * 6
 
         #self.drop_out = nn.Dropout()
 
