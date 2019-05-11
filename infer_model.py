@@ -20,7 +20,7 @@ class Infer_model(nn.Module):
         self.ft = Conv_Model(pretrained=True)
         self.ft.eval()
         self.latent = latent
-        """
+
         self.layer1 = nn.Sequential(
             nn.ZeroPad2d(2),
             nn.Conv2d(3, 32, kernel_size=5, stride=2), # 32 * 48 * 48
@@ -29,22 +29,22 @@ class Infer_model(nn.Module):
 
         self.layer2 = nn.Sequential(
             nn.ZeroPad2d(2),
-            nn.Conv2d(32, 32, kernel_size=5, stride=2), # 32 * 12 * 12
+            nn.Conv2d(32, 64, kernel_size=5, stride=2), # 32 * 12 * 12
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)) # 64 * 6 * 6
 
         self.drop_out = nn.Dropout()
-        """
-        #self.fc1 = nn.Linear(32 * 6 * 6 + self.latent, 1000)
-        self.fc1 = nn.Linear(self.latent, 1000)
-        #self.classification = nn.ModuleList([self.layer1, self.layer2, self.drop_out])
+
+        self.fc1 = nn.Linear(64 * 6 * 6 + self.latent, 1000)
+        #self.fc1 = nn.Linear(self.latent, 1000)
+        self.classification = nn.ModuleList([self.layer1, self.layer2, self.drop_out])
 
         if pretrained:
             self.load_weights(pretrained_model_path, cuda=torch.cuda.is_available())
 
     def forward(self, x):
         add_feature = self.ft.encode(x)
-        """
+
         # resize the input data
         # input data size is batch_size * 6 * 96 * 96
 
@@ -59,8 +59,8 @@ class Infer_model(nn.Module):
 
 
         return self.fc1(new_data)
-        """
-        return self.fc1(add_feature.view(-1, self.latent))
+
+        #return self.fc1(add_feature.view(-1, self.latent))
 
     def load_weights(self, pretrained_model_path, cuda=True):
         # Load pretrained model
