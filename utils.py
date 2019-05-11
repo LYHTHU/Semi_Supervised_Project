@@ -8,6 +8,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torch.autograd import grad, Variable
 import os
+from torch.utils.data.sampler import SubsetRandomSampler
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -63,6 +64,27 @@ class Data:
         train_data_sup = self.load_train_data_sup()
         print("Supervised training dataset: size =", len(train_data_sup))
 
+    def laod_train_val_data(self, valid_size=0.2, transform=None):
+        print("Start load supurvised training and val data")
+        data_train = torchvision.datasets.ImageFolder(root=self.sup_train_root_path, transform=transform)
+        train_loader1 = torch.utils.data.DataLoader(data_train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+
+        data_val = torchvision.datasets.ImageFolder(root=self.sup_val_root_path, transform=transform)
+        num_val = len(data_val)
+        indices = list(range(num_val))
+        split = int(np.floor(valid_size * num_val))
+        valid_idx1, valid_idx2 = indices[split:], indices[:split]
+        train_sampler = SubsetRandomSampler(valid_idx1)
+        valid_sampler = SubsetRandomSampler(valid_idx2)
+
+        train_loader2 = torch.utils.data.DataLoader(data_val, batch_size=self.batch_size, sampler=train_sampler, shuffle=False, num_workers=self.num_workers)
+        val_loader = torch.utils.data.DataLoader(data_val, batch_size=self.batch_size, sampler=valid_sampler, shuffle=False, num_workers=self.num_workers)
+
+        print("End load supurvised training and val data")
+        print("train loader size: {}, val loader size: {}".format(
+            len(train_loader1.dataset)+int(num_val*(1-valid_size)),
+            int(num_val*valid_size)))
+        return train_loader1, train_loader2, val_loader
 
 class Discriminator(nn.Module):
     """
