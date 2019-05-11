@@ -115,8 +115,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                 run_correct += torch.sum(labels.data == preds)
                 
                 
-            epoch_loss = run_loss/len(data_loader[phase])
-            epoch_acc = run_correct/len(data_loader[phase])
+            epoch_loss = run_loss/len(data_loader[phase].dataset)
+            epoch_acc = run_correct.double()/len(data_loader[phase].dataset)
 
             torch.save({
             'epoch': epoch,
@@ -147,8 +147,8 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
     
-    save_path = '/scratch/yc3329/infer_conv11.pt'
-    check_path = 'infer_conv11'
+    save_path = '/scratch/yc3329/infer_conv12.pt'
+    check_path = 'infer_conv12'
     model = Infer_model()
     model = model.to(device)
     
