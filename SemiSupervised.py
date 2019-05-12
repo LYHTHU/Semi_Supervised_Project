@@ -11,9 +11,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class SemiSupervised:
     def __init__(self, batch_size=32, num_workers=2):
-        self.sup_train_root_path = "/scratch/hl3420/ssl_data_96/supervised/train"
-        self.unsup_train_root_path = "/scratch/hl3420/ssl_data_96/unsupervised"
-        self.sup_val_root_path = "/scratch/hl3420/ssl_data_96/supervised/val"
+        self.sup_train_root_path = "../ssl_data_96/supervised/train"
+        self.unsup_train_root_path = "../ssl_data_96/unsupervised"
+        self.sup_val_root_path = "../ssl_data_96/supervised/val"
         self.model = None
         self.batch_size = batch_size
         self.num_workers = num_workers

@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     # Define arguments
     parser = argparse.ArgumentParser(description='Evaluation')
-    parser.add_argument('--data_dir', type=str, default='/scratch/hl3420/ssl_data_96',
+    parser.add_argument('--data_dir', type=str, default='../ssl_data_96',
                         help='location of data')
     parser.add_argument('--batch_size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')

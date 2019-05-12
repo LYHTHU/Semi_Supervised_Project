@@ -25,7 +25,7 @@ from modelVae_convnet import Conv_Model
 from infer_model import Infer_model
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
-parser.add_argument('--batch-size', type=int, default=256, metavar='N',
+parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 128)')
 parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -68,14 +68,14 @@ def loss_function(recon_x, x, mu, logvar):
 def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
     since = time.time()
 
-    #best_mode_wts = copy.deepcopy(model.state_dict())
+    # best_mode_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-    for epoch in range(6, num_epoch):
-        print("Epoch {}/{}".format(epoch, num_epoch-1))
+    for epoch in range(1, num_epoch+1):
+        print("Epoch {}/{}".format(epoch, num_epoch))
         print('-'*10)
         for phase in ['train', 'val']:
             if phase == 'train':
-                #scheduler.step()
+                # scheduler.step()
                 model.train()
             else:
                 model.eval()
@@ -84,7 +84,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
             run_correct = 0
             proc = 0
 
-            for inputs, labels in data_loader[phase]:
+            for batch_num, (inputs, labels) in enumerate(data_loader[phase]):
                 proc += args.batch_size
 
                 inputs = inputs.to(device)
@@ -114,7 +114,6 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                 run_loss += loss.item()*inputs.size(0)
                 run_correct += torch.sum(labels.data == preds)
 
-
             epoch_loss = run_loss/len(data_loader[phase].dataset)
             epoch_acc = run_correct.double()/len(data_loader[phase].dataset)
 
@@ -143,13 +142,14 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
 
 if __name__ == "__main__":
 
-    save_path = '/scratch/hl3420/infer_conv_v8.pt'
+    save_path = './models/infer_conv_1k.pt'
     model = Infer_model()
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
 
     #optimizer_ft = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
-    optimizer_ft = optim.Adam(model.parameters(), lr=1e-3, betas=(0.5, 0.99))
+    # optimizer_ft = optim.Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.99))
+    optimizer_ft = optim.Adam(model.parameters(), lr=3e-4, betas=(0.9, 0.999))
 
     train_model(model, criterion, optimizer_ft, save_path, num_epoch = 20)

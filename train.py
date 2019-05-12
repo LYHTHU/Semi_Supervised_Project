@@ -32,7 +32,7 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available()
@@ -50,7 +50,7 @@ test_loader = semi.load_val_data(transform=transforms.ToTensor())
 def loss_function(recon_x, x, mu, logvar):
     #print(recon_x.size())
     #print(x.view(-1, 3*96*96).size())
-    print(x.size(), recon_x.size())
+    # print(x.size(), recon_x.size())
     BCE = F.binary_cross_entropy(recon_x.view(-1, 3*96*96), x.view(-1, 3*96*96), reduction = 'sum')
 
     # see Appendix B from VAE paper:
@@ -82,7 +82,7 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
             #run_correct = 0
             proc = 0
 
-            for inputs, _ in train_loader:
+            for batch_num, (inputs, _) in enumerate(train_loader):
                 proc += args.batch_size
 
                 inputs = inputs.to(device)
@@ -106,6 +106,11 @@ def train_model(model, criterion, optimizer, save_path, num_epoch = 10):
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
+
+                if (batch_num + 1) % args.log_interval == 0:
+                    print(
+                        'Training: %d batch / %d total batches, %d Images, loss: %.4f;' % (
+                        batch_num + 1, len(train_loader), (batch_num + 1) * args.batch_size, loss.item()))
 
                 # statistics
                 run_loss += loss.item()*inputs.size(0)
